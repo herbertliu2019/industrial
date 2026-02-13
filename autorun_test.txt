@@ -5,6 +5,10 @@
 ############################
 # 0. Pre-checks & Safety
 ############################
+export TERM=linux
+LOG_DIR="/root/test_logs"
+mkdir -p $LOG_DIR
+GSAT_LOG="$LOG_DIR/gsat_$(date +%Y%m%d_%H%M%S).log"
 
 if [ "$EUID" -ne 0 ]; then
     echo "Please run this script as root."
@@ -50,7 +54,7 @@ fi
 ############################
 
 FREE_KB=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
-TEST_MB=$((FREE_KB * 94 / 100 / 1024))
+TEST_MB=$((FREE_KB * 90 / 100 / 1024))
 
 [ "$TEST_MB" -lt 1024 ] && TEST_MB=1024
 
@@ -116,7 +120,7 @@ stressapptest \
     -W \
     -m ${MEM_THREADS} \
     --cc_test \
-    > /tmp/gsat.log 2>&1 &
+    > $GSAT_LOG 2>&1 &
 
 GSAT_PID=$!
 wait $GSAT_PID
@@ -180,9 +184,9 @@ else
     echo
     diff /tmp/pre_test_errors.log /tmp/post_test_errors.log | grep '^>' || echo "No new kernel errors."
 
-    curl -s -X POST http://YOUR_SERVER_IP:8080/report \
-        -d "host=$HOST_ID&result=FAIL&cpu_sn=$CPU_SN&mem_count=$MEM_COUNT&ecc_status=$ECC_STATUS&log=$(tail -n 50 /tmp/gsat.log | base64 -w 0)" \
-        || echo "Report server unreachable."
+    #curl -s -X POST http://YOUR_SERVER_IP:8080/report \
+    #    -d "host=$HOST_ID&result=FAIL&cpu_sn=$CPU_SN&mem_count=$MEM_COUNT&ecc_status=$ECC_STATUS&log=$(tail -n 50 /tmp/gsat.log | base64 -w 0)" \
+    #    || echo "Report server unreachable."
 
     for i in {1..10}; do echo -e "\a" > /dev/tty1; sleep 0.5; done
     while true; do sleep 60; done
