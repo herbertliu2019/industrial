@@ -119,8 +119,9 @@ TEMP_PID=$!
 stressapptest \
     -M ${TEST_MB} \
     -s ${TEST_TIME} \
-    -W \
+    --p_proces ${TOTAL_CORES} \
     -m ${MEM_THREADS} \
+    -p 512 \
     -C ${TOTAL_CORES}   \
     --cc_test | tee  $GSAT_LOG &
 
