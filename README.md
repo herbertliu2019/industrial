@@ -2,7 +2,7 @@ To make your 10-server testing operation seamless and professional, here is the 
 
 I have integrated the "Log Clear" tool into a final package. You should have these three files on your Master Control PC.
 
-1. Preparation: The Three Tools
+# 1. Preparation: The Three Tools
 Filename,Purpose,When to run
 cluster_monitor.sh,Real-time dashboard (Status of 10 nodes),Continuous (using watch)
 
@@ -10,11 +10,11 @@ cluster_clear_logs.sh,Reset hardware logs for a fresh start,Before starting each
 
 cluster_poweroff.sh,Shut down all successful nodes,After testing is complete
 
-2. The Logic for cluster_clear_logs.sh
+# 2. The Logic for cluster_clear_logs.sh
 Create this new script to ensure old errors from previous RAM sticks don't confuse your current test.
 
 
-3. Step-by-Step Operation Order (SOP)
+# 3. Step-by-Step Operation Order (SOP)
 Step 1: Physical Setup
 Insert the RAM sticks into the 10 servers and connect the power. Ensure the IPMI network cables are connected to your switch.
 
@@ -47,15 +47,15 @@ Once all servers are either FAILED or COMPLETED, run the shutdown tool:
 
 Wait for the dashboard to show all servers as POWER OFF.
 
-4. Summary of Master PC Commands
+# 4. Summary of Master PC Commands
 
-# 1. Start Batch
+1. Start Batch
 ./cluster_clear_logs.sh
 
-# 2. Monitor (Keep this running in a dedicated terminal window)
+ 2. Monitor (Keep this running in a dedicated terminal window)
 watch -d -n 10 ./cluster_monitor.sh
 
-# 3. End Batch
+3. End Batch
 ./cluster_poweroff.sh
 
 Final Tip: If you notice one server is consistently OFFLINE while others are ONLINE, check if its system disk is disconnected or if the BIOS is stuck on a "Keyboard Not Found" style prompt (which you can bypass using the IPMI Web KVM).
