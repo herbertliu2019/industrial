@@ -96,3 +96,35 @@ Batch Power Off:
 这个监控脚本现在非常健壮，能够帮你准确区分“系统还没启动”、“正在启动”、“内存报错”和“测试完成”四种状态。
 
 
+**“死在 BIOS 阶段”**的情况确实时有发生。
+简短的回答是：监控脚本完全可以得知。 即使系统没有加载（没进 Linux），Supermicro 的 BMC（管理芯片） 是独立于 CPU 和操作系统的。只要电源线插着，BMC 就会在后台持续监控 BIOS 的自检过程。
+
+以下是监控脚本在不同 BIOS 故障场景下的表现：
+
+1. 监控脚本如何捕捉 BIOS 报错？
+当内存损坏导致 BIOS 无法通过自检（POST）时，Supermicro 主板会将错误实时写入 SEL（系统事件日志）。
+
+场景 A：致命损坏（无法开机）
+如果内存彻底损坏，BIOS 会卡在内存初始化阶段。此时，监控脚本会抓取到类似这样的日志：
+Latest SEL: Memory | Memory Device Disabled | Critical | Slot DIMMA1
+监控显示： FAILED | on | ERROR!
+
+场景 B：内存被禁用（能开机但容量不对）
+如果某根内存不稳定，BIOS 可能会为了保护系统而将其“屏蔽（Disabled）”。
+监控显示： 同样会显示 ERROR!，日志会提示 Memory configuration error 或 Correctable ECC logging limit reached。
+
+# 你的完整工作流：
+# 开始：在 10 台机器上插入内存。
+
+# 压测：服务器启动后自动运行 GSAT 脚本。
+
+#监控：在主控机运行 watch -n 10 ./cluster_monitor.sh。
+
+#等待：GSAT 跑完 5 分钟后，服务器会 sleep 60。
+
+#收尾：你在主控机看到所有机器都测试通过，运行 ./cluster_poweroff.sh。
+
+#物理拆卸：看到机器全黑了，直接拔掉内存，换下一批。
+
+
+
