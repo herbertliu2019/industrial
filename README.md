@@ -127,4 +127,17 @@ Latest SEL: Memory | Memory Device Disabled | Critical | Slot DIMMA1
 #物理拆卸：看到机器全黑了，直接拔掉内存，换下一批。
 
 
+你的“无人值守”流程建议
+既然你已经有 10 台机器，你可以这样布置你的控制台：
+
+准备一台笔记本，作为主控机。
+
+分屏操作：
+
+左边窗口： 运行 watch -n 10 ./ipmi_monitor.sh。看到绿色就不用管，看到红色就记录下对应的 IP。
+
+右边窗口： 随时准备远程 SSH 进入红色的机器看具体的 GSAT 报错细节。
+
+关键点： 如果你发现某台机器变红了，但它还在跑测试，不要立即关机。先看 ipmitool sel list 报错里提到的 DIMM Slot（如 DIMM A1），这样你拆机的时候就知道该拔哪一根，而不是瞎猜。
+
 
