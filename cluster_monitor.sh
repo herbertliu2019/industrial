@@ -66,6 +66,7 @@ for IP in "${SERVERS[@]}"; do
         # 1. Hardware Error Detected (Highest Priority)
         printf "%-15s | %-21s | %-10s | ${RED}%-12s${NC}\n" "$IP" "$OS_STATUS" "$POWER" "FAILED"
         echo -e "  └─ ${RED}HW ERROR: $ERROR_LOG${NC}"
+        echo -e "\a" # set alarm sound
     
     elif [[ "$POWER" == "off" ]]; then
         # 2. Server is Powered Off
