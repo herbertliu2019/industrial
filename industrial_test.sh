@@ -168,8 +168,17 @@ if [ "$GSAT_EXIT" -eq 0 ] && [ "$ERROR_COUNT" -eq 0 ] && [ "$NEW_ERRORS" -eq 0 ]
         -d "host=$HOST_ID&result=PASS&cpu_sn=$CPU_SN&mem_count=$MEM_COUNT&ecc_status=$ECC_STATUS" \
         || echo "Report server unreachable."
 
-    sleep 10
-    poweroff
+    echo "------------------------------------------"
+    echo "TEST COMPLETE - Waiting 60s for log sync..."
+    
+    # Pro Tip: Add a custom record to the IPMI SEL log
+    # This allows your monitoring script to capture the "Test Finished" status
+    # 0x02 0x00 0x01 is a generic "Information" code for manual logging
+    ipmitool sel add 0x02 0x00 0x01 > /dev/null 2>&1
+
+    sleep 60
+    # Script exits here. Server stays ON for remote verification.
+    exit 0
 
 else
 
