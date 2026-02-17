@@ -65,14 +65,24 @@ MEM_THREADS=$(( $(nproc) / 2 ))
 
 dmesg | grep -iE "ECC|MCE|Hardware Error" > /tmp/pre_test_errors.log
 
+echo -n "GSAT is running... [ "
 stressapptest \
     -M ${TEST_MB} \
     -s ${TEST_TIME} \
     -W \
     -m ${MEM_THREADS} \
     -C ${TOTAL_CORES}   \
-    --cc_test | tee $GSAT_LOG 
+    --cc_test > $GSAT_LOG 2>&1 &
+GSAT_PID=$!
+
+# 在后台运行时显示简单的进度
+while kill -0 $GSAT_PID 2>/dev/null; do
+    echo -n "#"
+    sleep 10
+done
+wait $GSAT_PID
 GSAT_EXIT=$?
+echo " ] Done!"
 
 dmesg | grep -iE "ECC|MCE|Hardware Error" > /tmp/post_test_errors.log
 NEW_ERRORS=$(diff /tmp/pre_test_errors.log /tmp/post_test_errors.log | grep '^>' | wc -l)
