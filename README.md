@@ -140,4 +140,8 @@ Latest SEL: Memory | Memory Device Disabled | Critical | Slot DIMMA1
 
 关键点： 如果你发现某台机器变红了，但它还在跑测试，不要立即关机。先看 ipmitool sel list 报错里提到的 DIMM Slot（如 DIMM A1），这样你拆机的时候就知道该拔哪一根，而不是瞎猜。
 
+# 免密码sudo（工业机推荐）：
+
+echo 'ALL ALL=(ALL) NOPASSWD: /usr/sbin/uhubctl' | sudo tee /etc/sudoers.d/uhubctl
+sudo chmod 440 /etc/sudoers.d/uhubctl
 
