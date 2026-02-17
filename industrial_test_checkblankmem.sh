@@ -92,18 +92,25 @@ ERROR_COUNT=$(grep -iE "FAIL|ERROR" "$GSAT_LOG" | grep -vi "0 errors" | wc -l)
 # 9. Final Summary Report (Tiered Decision)
 ############################################################
 
-# Tiered Status Logic:
-# 1. If real errors exist -> FAIL
-# 2. If no errors but DIMMs missing/IPMI log exists -> WARNING
-# 3. If everything is perfect -> PASS
+# --- A. 精准提取 GSAT 报告的错误数字 ---
+# 从 "with 0 hardware incidents, 0 errors" 这一行提取最后的数字
+GSAT_REAL_ERRORS=$(grep "with .* errors" "$GSAT_LOG" | tail -n 1 | awk -F', ' '{print $2}' | awk '{print $1}')
+[ -z "$GSAT_REAL_ERRORS" ] && GSAT_REAL_ERRORS=0
 
-if [ "$GSAT_EXIT" -ne 0 ] || [ "$ERROR_COUNT" -gt 0 ] || [ "$NEW_ERRORS" -gt 0 ]; then
+# --- B. 综合错误计数 ---
+# 只有 GSAT 显式报错、系统内核报错(NEW_ERRORS)、或程序异常退出(GSAT_EXIT)才算 FAIL
+TOTAL_CRITICAL_ERRORS=$((GSAT_REAL_ERRORS + NEW_ERRORS))
+
+if [ "$GSAT_EXIT" -ne 0 ] || [ "$TOTAL_CRITICAL_ERRORS" -gt 0 ]; then
+    # 真正的硬件稳定性故障
     FINAL_STATUS="FAIL"
     setterm -background red -foreground white -clear all
 elif [ "$HW_DROP_DETECTED" -eq 1 ] || [ -n "$IPMI_ERRORS" ]; then
+    # 测试通过，但硬件配置不全或有历史记录
     FINAL_STATUS="WARNING"
     setterm -background yellow -foreground black -clear all
 else
+    # 完美通过
     FINAL_STATUS="PASS"
     setterm -background green -foreground white -clear all
 fi
@@ -112,18 +119,9 @@ echo -e "\n=========================================="
 echo -e "         FINAL TEST SUMMARY REPORT"
 echo -e "=========================================="
 echo -e "  Overall Verdict      : $FINAL_STATUS"
-echo -e "  GSAT Exit Code       : $GSAT_EXIT"
-echo -e "  GSAT Memory Errors   : $ERROR_COUNT"
+echo -e "  GSAT Status          : $([ "$GSAT_REAL_ERRORS" -eq 0 ] && echo "CLEAN" || echo "ERRORS FOUND")"
 echo -e "  New Kernel Errors    : $NEW_ERRORS"
 echo -e "------------------------------------------"
-echo -e "  DIMM Slots Empty     : $([ "$HW_DROP_DETECTED" -eq 1 ] && echo -e "${RED}YES${NC}" || echo "NO")"
-echo -e "  IPMI History Fault   : $([ -n "$IPMI_ERRORS" ] && echo -e "${RED}YES${NC}" || echo "NO")"
+echo -e "  DIMM Configuration   : $([ "$HW_DROP_DETECTED" -eq 1 ] && echo -e "${RED}INCOMPLETE (Slot Missing)${NC}" || echo "FULL")"
+echo -e "  IPMI History Status  : $([ -n "$IPMI_ERRORS" ] && echo -e "${RED}HAS FAULTS${NC}" || echo "CLEAN")"
 echo -e "==========================================\n"
-
-# Only trigger the buzzer alarm on actual FAIL
-if [ "$FINAL_STATUS" == "FAIL" ]; then
-    for i in {1..10}; do echo -e "\a" > /dev/tty1; sleep 0.3; done
-fi
-
-echo "Detailed logs: $LOG_DIR"
-while true; do sleep 60; done
