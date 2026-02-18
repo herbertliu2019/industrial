@@ -31,6 +31,33 @@ GET /api/latest
  {server2 json}
 ]
 
+### 总结逻辑流程
+测试机上传 JSON
+         ↓
+   中控服务器处理：
+   ├─ 保存历史记录：history/hostname_时间.json （永久保存）
+   └─ 更新最新状态：latest/hostname.json （覆盖旧文件）
+         ↓
+网页读取 latest 文件夹
+         ↓
+显示所有机器的最新状态
+
+
+所以“最新数据”就是 latest 文件夹里的 JSON 文件，判断依据：
+
+同一台机器只有一个 latest 文件
+
+最新上传的数据覆盖旧文件
+
+文件名或者 JSON 内的 timestamp 可辅助排序（可选
+
+### 核心思想：
+
+history/ = 永久存档
+
+latest/ = 最新状态（每台机器覆盖）
+
+网页只看 latest/ → 总是显示最新测试数
 
 ## 网页显示：http://中控服务器IP:5000/
 
