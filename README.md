@@ -7,7 +7,7 @@
            ↓
 网页读取 latest
 
-##目录结构（自动创建）
+## 目录结构（自动创建）
 
 运行后服务器会生成：
 
@@ -16,7 +16,7 @@ data/
  └── latest/
 
 
-##接口说明（给前端或调试用）
+## 接口说明（给前端或调试用）
 上传数据
 POST /api/upload
 
@@ -35,7 +35,7 @@ GET /api/latest
 GET /api/latest/server01
 
 
-
+## END
 
 
 
