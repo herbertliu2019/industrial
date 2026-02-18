@@ -1,3 +1,22 @@
+
+[ 测试机 (Node) ]                               [ 中控服务器 (Center Server) ]
+      |                                              |
+      | 1. 扫描硬件 (dmidecode)                       |
+      | 2. 压力测试 (stressapptest)                   |
+      | 3. 生成 JSON (report.json)                    |
+      |                                              |
+      |---- 4. POST 上传 (curl) -------------------->|  5. 运行 app.py (Flask)
+      |                                              |         |
+      |                                              |  6. 分流存储数据:
+      |                                              |     ├── history/ (永久存档)
+      |                                              |     └── latest/  (覆盖更新)
+      |                                              |
+      |                                              |  7. 网页展示 (Dashboard)
+      |                                              |         |
+      |<--- 8. 访问 http://IP:5000 ------------------| <用户浏览器>
+
+
+
 ## 当前系统运行逻辑（完整流程）
 测试机
    ↓ POST JSON
