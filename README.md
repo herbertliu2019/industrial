@@ -31,7 +31,7 @@ GET /api/latest
  {server2 json}
 ]
 
-### 总结逻辑流程
+# 总结逻辑流程
 测试机上传 JSON
          ↓
    中控服务器处理：
@@ -51,7 +51,7 @@ GET /api/latest
 
 文件名或者 JSON 内的 timestamp 可辅助排序（可选
 
-### 核心思想：
+# 核心思想：
 
 history/ = 永久存档
 
