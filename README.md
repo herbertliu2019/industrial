@@ -31,8 +31,36 @@ GET /api/latest
  {server2 json}
 ]
 
-获取单台状态
-GET /api/latest/server01
+
+## 网页显示：http://中控服务器IP:5000/
+
+显示所有测试机的最新状态（latest 文件夹）
+
+每行一台测试机
+
+背景颜色根据状态：
+
+PASS = 绿色
+
+FAIL = 红色
+
+WARNING = 黄色
+
+数据来源：
+
+/api/latest 返回所有测试机 JSON
+
+HTML页面通过 JS fetch 自动读取并生成表格
+
+自动每2秒刷新
+
+测试机上传逻辑：
+
+继续用你整合好的 curl POST 上传 JSON
+
+上传后 /data/latest/hostname.json 会被更新
+
+网页自动显示最新状态
 
 
 ## END
