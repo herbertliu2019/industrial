@@ -1,3 +1,59 @@
+## 当前系统运行逻辑（完整流程）
+测试机
+   ↓ POST JSON
+服务器
+   ├── 保存 history 文件
+   └── 覆盖 latest 文件
+           ↓
+网页读取 latest
+
+##目录结构（自动创建）
+
+运行后服务器会生成：
+
+data/
+ ├── history/
+ └── latest/
+
+
+##接口说明（给前端或调试用）
+上传数据
+POST /api/upload
+
+获取全部最新状态
+GET /api/latest
+
+
+返回：
+
+[
+ {server1 json},
+ {server2 json}
+]
+
+获取单台状态
+GET /api/latest/server01
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 To make your 10-server testing operation seamless and professional, here is the Standard Operating Procedure (SOP).
 
 I have integrated the "Log Clear" tool into a final package. You should have these three files on your Master Control PC.
