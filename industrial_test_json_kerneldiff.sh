@@ -5,20 +5,19 @@
 
 TEST_TIME=300
 LOG_DIR="/root/test_logs"
-UPLOAD_URL="http://your-server/api/upload"   # ← 改成你的服务器地址
+UPLOAD_URL="http://中控服务器IP:5000/api/upload"   # ← 改成你的中控服务器地址
 mkdir -p $LOG_DIR
 
 GSAT_LOG="$LOG_DIR/gsat_$(date +%Y%m%d_%H%M%S).log"
 MEM_INV_LOG="$LOG_DIR/memory_inventory.log"
 
-############################################
-# PHASE 1 — DIMM Inventory
-############################################
-
+############################################################
+# 1. DIMM Inventory
+############################################################
 HW_DROP_DETECTED=0
 
 INV_DATA=$(sudo dmidecode -t memory | grep -E "Locator:|Size:" | grep -v "Bank" | awk '
-BEGIN { print "--- Physical Slot Inventory ---" }
+BEGIN { }
  /Size:/ { line = $0; sub(/.*Size: /, "", line); current_size = line }
  /Locator:/ {
      line = $0; sub(/.*Locator: /, "", line); loc = line;
@@ -33,10 +32,9 @@ BEGIN { print "--- Physical Slot Inventory ---" }
 [ -f /tmp/hw_drop ] && HW_DROP_DETECTED=1 && rm /tmp/hw_drop
 echo "$INV_DATA" > "$MEM_INV_LOG"
 
-############################################
-# PHASE 2 — Stress Test
-############################################
-
+############################################################
+# 2. Stress Test
+############################################################
 TOTAL_CORES=$(nproc)
 FREE_KB=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
 TEST_MB=$((FREE_KB * 95 / 100 / 1024))
@@ -45,16 +43,11 @@ TEST_MB=$((FREE_KB * 95 / 100 / 1024))
 MEM_THREADS=$(( TOTAL_CORES / 2 ))
 [ "$MEM_THREADS" -lt 4 ] && MEM_THREADS=4
 
-############################################
 # Kernel baseline logs
-############################################
-
 dmesg | grep -iE "ECC|EDAC|MCE|Machine Check" > /tmp/pre_errors.log
 
-############################################
 # Run stressapptest
-############################################
-
+echo "Running stressapptest..."
 stressapptest \
 -M ${TEST_MB} \
 -s ${TEST_TIME} \
@@ -65,33 +58,21 @@ stressapptest \
 
 GSAT_EXIT=$?
 
-############################################
 # Kernel errors after test
-############################################
-
 dmesg | grep -iE "ECC|EDAC|MCE|Machine Check" > /tmp/post_errors.log
 diff /tmp/pre_errors.log /tmp/post_errors.log > /tmp/diff_errors.log
 
-############################################
-# 分类统计错误类型
-############################################
-
+# 分类统计
 MEMORY_ERRORS=$(grep -iE "ECC|EDAC" /tmp/diff_errors.log | wc -l)
 CPU_ERRORS=$(grep -iE "MCE|Machine Check" /tmp/diff_errors.log | wc -l)
 
-############################################
 # GSAT error count
-############################################
-
 GSAT_REAL_ERRORS=$(grep "with .* errors" "$GSAT_LOG" | tail -n1 | awk -F', ' '{print $2}' | awk '{print $1}')
 [ -z "$GSAT_REAL_ERRORS" ] && GSAT_REAL_ERRORS=0
 
 TOTAL_CRITICAL_ERRORS=$((GSAT_REAL_ERRORS + MEMORY_ERRORS + CPU_ERRORS))
 
-############################################
 # FINAL STATUS
-############################################
-
 if [ "$GSAT_EXIT" -ne 0 ] || [ "$TOTAL_CRITICAL_ERRORS" -gt 0 ]; then
     FINAL_STATUS="FAIL"
 elif [ "$HW_DROP_DETECTED" -eq 1 ]; then
@@ -100,10 +81,9 @@ else
     FINAL_STATUS="PASS"
 fi
 
-############################################
-# 构建 JSON
-############################################
-
+############################################################
+# 3. 构建 JSON
+############################################################
 HOSTNAME=$(hostname)
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -141,31 +121,27 @@ JSON_DATA=$(cat <<EOF
 EOF
 )
 
-############################################
-# 保存 JSON 日志
-############################################
-
+# 保存JSON日志
 JSON_FILE="$LOG_DIR/report_$(date +%s).json"
 echo "$JSON_DATA" > "$JSON_FILE"
 
-############################################
-# 上传到服务器
-############################################
-
+############################################################
+# 4. 上传到中控服务器API
+############################################################
+echo "Uploading JSON to server..."
 curl -s -X POST "$UPLOAD_URL" \
 -H "Content-Type: application/json" \
--d "$JSON_DATA" >/dev/null
+-d @"$JSON_FILE"
 
-############################################
-# 本地打印总结
-############################################
+echo "Upload complete. JSON saved at $JSON_FILE"
 
+############################################################
+# 5. 打印总结
+############################################################
 echo "=================================="
 echo "STATUS: $FINAL_STATUS"
 echo "GSAT ERRORS: $GSAT_REAL_ERRORS"
 echo "MEMORY ERRORS: $MEMORY_ERRORS"
 echo "CPU ERRORS: $CPU_ERRORS"
-echo "JSON saved: $JSON_FILE"
+echo "JSON File: $JSON_FILE"
 echo "=================================="
-
-while true; do sleep 60; done
