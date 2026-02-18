@@ -1,110 +1,95 @@
-# server.py
-from flask import Flask, jsonify
-import os, json
+from flask import Flask, jsonify, request
+import os, json, time
 
 app = Flask(__name__)
 
-# 文件夹路径
 BASE_DIR = "data"
 HISTORY_DIR = os.path.join(BASE_DIR, "history")
 LATEST_DIR = os.path.join(BASE_DIR, "latest")
 
-# 创建文件夹
 os.makedirs(HISTORY_DIR, exist_ok=True)
 os.makedirs(LATEST_DIR, exist_ok=True)
 
-#########################################################
-# 上传接口：测试机 POST JSON
-#########################################################
 @app.route("/api/upload", methods=["POST"])
 def upload():
     data = request.json
-    if not data:
-        return jsonify({"error": "no json"}), 400
-
+    if not data: return jsonify({"status": "error", "message": "no data"}), 400
+    
     hostname = data.get("device", {}).get("hostname", "unknown")
-    ts = int(json.get("device", {}).get("timestamp_ts", str(int(os.times()[4]))))  # 可选时间戳 fallback
-
-    # ---------- 保存历史 ----------
-    history_file = f"{hostname}_{ts}.json"
-    with open(os.path.join(HISTORY_DIR, history_file), "w") as f:
+    # 清理文件名
+    hostname = "".join(c for c in hostname if c.isalnum() or c in "-_").rstrip()
+    
+    ts = int(time.time())
+    
+    # 保存历史 (带上时间戳防止冲突)
+    with open(os.path.join(HISTORY_DIR, f"{hostname}_{ts}.json"), "w") as f:
         json.dump(data, f, indent=2)
 
-    # ---------- 更新最新 ----------
-    latest_file = os.path.join(LATEST_DIR, f"{hostname}.json")
-    with open(latest_file, "w") as f:
+    # 更新最新状态
+    with open(os.path.join(LATEST_DIR, f"{hostname}.json"), "w") as f:
         json.dump(data, f, indent=2)
 
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "received": hostname})
 
-
-#########################################################
-# 获取所有最新状态（网页或API读取）
-#########################################################
 @app.route("/api/latest")
 def latest_all():
     result = []
     for file in os.listdir(LATEST_DIR):
-        path = os.path.join(LATEST_DIR, file)
-        try:
-            with open(path) as f:
-                result.append(json.load(f))
-        except:
-            continue
+        if not file.endswith(".json"): continue
+        with open(os.path.join(LATEST_DIR, file)) as f:
+            result.append(json.load(f))
     return jsonify(result)
 
-
-#########################################################
-# 网页仪表盘
-#########################################################
 @app.route("/")
 def dashboard():
     return """
+<!DOCTYPE html>
 <html>
 <head>
-<title>Memory Test Dashboard</title>
-<style>
-body{font-family:Arial;}
-table{border-collapse:collapse;width:100%;}
-th,td{border:1px solid #333;padding:8px;text-align:center;}
-th{background:#555;color:white;}
-</style>
-<script>
-async function load(){
-    let r = await fetch('/api/latest');
-    let data = await r.json();
-    let html = "<h2>Memory Test Dashboard - All Machines</h2>";
-    html += "<table>";
-    html += "<tr><th>Hostname</th><th>Status</th><th>GSAT Errors</th><th>Memory Errors</th><th>CPU Errors</th><th>Test Time</th></tr>";
-
-    data.forEach(d=>{
-        let status = d.result.status;
-        let color = status=="PASS"?"#9cff9c":status=="FAIL"?"#ff9c9c":"#ffe49c";
-        html += `<tr style="background:${color}">
-            <td>${d.device.hostname}</td>
-            <td>${status}</td>
-            <td>${d.errors.gsat}</td>
-            <td>${d.errors.memory}</td>
-            <td>${d.errors.cpu}</td>
-            <td>${d.device.timestamp}</td>
-        </tr>`;
-    });
-
-    html += "</table>";
-    document.body.innerHTML = html;
-}
-setInterval(load, 2000);  // 每2秒刷新一次
-load();
-</script>
+    <title>RAM Test Center</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; }
+        .card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .status-PASS { border-left: 10px solid #2ecc71; }
+        .status-FAIL { border-left: 10px solid #e74c3c; }
+        .status-WARNING { border-left: 10px solid #f1c40f; }
+        .info { flex-grow: 1; margin-left: 20px; }
+        .hostname { font-size: 1.2em; font-weight: bold; }
+        .error-badge { background: #eee; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; margin-right: 10px; }
+    </style>
 </head>
 <body>
-Loading...
+    <h1>Memory Test Dashboard</h1>
+    <div id="container">Loading servers...</div>
+    <script>
+        async function update() {
+            const r = await fetch('/api/latest');
+            const data = await r.json();
+            const container = document.getElementById('container');
+            container.innerHTML = data.map(d => `
+                <div class="card status-${d.result.status}">
+                    <div class="info">
+                        <div class="hostname">${d.device.hostname}</div>
+                        <div>Status: <strong>${d.result.status}</strong> | Last Seen: ${d.device.timestamp}</div>
+                        <div style="margin-top:5px">
+                            <span class="error-badge">GSAT: ${d.errors.gsat}</span>
+                            <span class="error-badge">MEM: ${d.errors.memory}</span>
+                            <span class="error-badge">CPU: ${d.errors.cpu}</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right; font-size:0.9em; color:#666;">
+                        Tested: ${d.system.tested_memory_mb} MB<br>
+                        Cores: ${d.system.cpu_cores}
+                    </div>
+                </div>
+            `).join('');
+        }
+        setInterval(update, 3000);
+        update();
+    </script>
 </body>
 </html>
 """
 
-#########################################################
-# 启动服务器
-#########################################################
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=False)
